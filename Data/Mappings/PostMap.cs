@@ -10,32 +10,26 @@ namespace Blog.Data.Mappings
     {
         public void Configure(EntityTypeBuilder<Post> builder)
         {
-            // Tabela
+          
             builder.ToTable("Post");
-
-            // Chave Primária
+         
             builder.HasKey(x => x.Id);
 
-            // Identity
             builder.Property(x => x.Id)
                 .ValueGeneratedOnAdd()
                 .UseIdentityColumn();
 
-            // Propriedades
+        
             builder.Property(x => x.LastUpdateDate)
                 .IsRequired()
                 .HasColumnName("LastUpdateDate")
                 .HasColumnType("SMALLDATETIME")
                 .HasMaxLength(60)
                 .HasDefaultValueSql("GETDATE()");
-            // .HasDefaultValue(DateTime.Now.ToUniversalTime());
-
-            // Índices
+           
             builder
                 .HasIndex(x => x.Slug, "IX_Post_Slug")
                 .IsUnique();
-
-            // Relacionamentos
             builder
                 .HasOne(x => x.Author)
                 .WithMany(x => x.Posts)
@@ -48,7 +42,6 @@ namespace Blog.Data.Mappings
                 .HasConstraintName("FK_Post_Category")
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Relacionamentos
             builder
                 .HasMany(x => x.Tags)
                 .WithMany(x => x.Posts)

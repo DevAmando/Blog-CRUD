@@ -7,15 +7,20 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Blog;
 using System.Text.Json;
-using Microsoft.Extensions.DependencyInjection;  
-
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
 
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
 builder.Services.AddDbContext<BlogDataContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(connectionString + ";Max Pool Size=200;Connect Timeout=30;", sql =>
+    {
+        sql.EnableRetryOnFailure();
+    })
+    .LogTo(Console.WriteLine, Microsoft.Extensions.Logging.LogLevel.Information)
+);
 
 builder.Services.AddTransient<TokenService>();
 
@@ -32,44 +37,46 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-
 builder.Services.AddAuthorization();
 
-builder.Services.AddControllers().ConfigureApiBehaviorOptions(options => { 
-
-    options.SuppressModelStateInvalidFilter = true;
-
-})
-.AddJsonOptions(x => { 
-    
-    x.JsonSerializerOptions.ReferenceHandler =ReferenceHandler.IgnoreCycles;
-    x.JsonSerializerOptions.DefaultIgnoreCondition =JsonIgnoreCondition.WhenWritingDefault;
-
-});
+builder.Services.AddControllers()
+    .ConfigureApiBehaviorOptions(options => { options.SuppressModelStateInvalidFilter = true; })
+    .AddJsonOptions(x =>
+    {
+        x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+        x.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault;
+    });
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+
 var app = builder.Build();
 
 LoadConfiguration(app);
 
-app.UseRouting();          
-app.UseStaticFiles();      
-app.UseAuthentication();   
-app.UseAuthorization();    
-app.MapRazorPages();       
-app.MapControllers();      
+app.UseStaticFiles();
+app.UseRouting();
+app.UseAuthentication();
+app.UseAuthorization();
 
+app.MapRazorPages();
+app.MapControllers();
 
-using (var scope = app.Services.CreateScope())
+var deveRodarSeed = app.Configuration.GetValue<bool>("SeedData");
+if (deveRodarSeed)
 {
-    var db = scope.ServiceProvider.GetRequiredService<BlogDataContext>();
-    DataSeeder.Seed(db);
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<BlogDataContext>();
+        Console.WriteLine(">>> Iniciando Seed de 5000 registros...");
+        DataSeeder.Seed(db);
+        Console.WriteLine(">>> Seed finalizado com sucesso! Altere SeedData para false no appsettings.json.");
+    }
 }
 
 if (app.Environment.IsDevelopment())
 {
-    Console.WriteLine("Desenvolvimento");
+    Console.WriteLine("Ambiente: Desenvolvimento");
     app.UseSwagger();
     app.UseSwaggerUI();
 }

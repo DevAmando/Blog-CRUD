@@ -19,16 +19,15 @@ class BlogUser(HttpUser):
                 response.success()
             else:
                 response.failure(f"Status code: {response.status_code}")
-
-    @task(5)
-    def get_posts(self):
-        
-        with self.client.get("/Post/v1/posts", catch_response=True) as response:
-            if response.status_code == 200:
-                response.success()
-            else:
-                response.failure(f"Status code: {response.status_code}")
-
+@task(5)
+def get_posts(self):
+    
+    skip = random.randint(0, 20) * 25 
+    with self.client.get(f"/Post/v1/posts?skip={skip}&take=25", catch_response=True) as response:
+        if response.status_code == 200:
+            response.success()
+        else:
+            response.failure(f"Status code: {response.status_code}")
     @task(3)
     def get_post_detail(self):
         post_id = 1

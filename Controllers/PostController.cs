@@ -21,21 +21,22 @@ namespace Blog.Controllers
         }
 
         [HttpGet("v1/posts")]
-        public async Task<IActionResult> GetPosts()
+        public async Task<IActionResult> GetPosts([FromQuery] int skip = 0, [FromQuery] int take = 25)
         {
+            if (take > 100) take = 100;
             var posts = await _dbcontext
                 .Posts
                 .AsNoTracking()
-                .Include(x => x.Category)
-                .Include(x => x.Author)
+                .Skip(skip) 
+                .Take(take)
                 .Select(x => new ListPostsViewModel
                 {
                     Id = x.Id,
                     Title = x.Title,
                     Slug = x.Slug,
-                    Category = x.Category.Name,
+                    Category = x.Category != null ? x.Category.Name : "Sem Categoria",
                     LastUpdateDate = x.LastUpdateDate,
-                    Author = x.Author.Name
+                    Author = x.Author != null ? x.Author.Name : "Anônimo"
 
                 })
                 .ToListAsync();
@@ -75,8 +76,6 @@ namespace Blog.Controllers
             var posts = await _dbcontext
                 .Posts
                 .AsNoTracking()
-                .Include(x => x.Author)
-                .Include(x => x.Category)
                 .Where(x => x.Category.Slug == category)
                 .Select(x => new ListPostsViewModel
                 {
