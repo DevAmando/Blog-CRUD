@@ -75,9 +75,18 @@ class AuthenticatedUser(HttpUser):
     wait_time = between(2, 5)
     host = "http://localhost:5010"
     token = None
+    # Opcional: configure estas propriedades em tempo de execução para usar credenciais fixas
+    auth_email = None
+    auth_password = None
 
     def on_start(self):
+        # Tenta autenticar ao iniciar o usuário autenticado
         self.login()
+
+    def login(self):
+        """Autenticação desativada para testes: não realiza chamadas a /accounts ou /accounts/login."""
+        print("[locust] Autenticação desativada para testes; prosseguindo sem token")
+        self.token = None
 
     @task(3)
     def get_posts(self):
@@ -150,35 +159,35 @@ class AuthenticatedUser(HttpUser):
                 response.failure(f"Status code: {response.status_code}")
 
 
-class RegistrationUser(HttpUser):
-    
-    wait_time = between(3, 6)
-    host = "http://localhost:5010"
-
-    @task(1)
-    def register_user(self):
-        random_id = random.randint(10000, 99999)
-        register_data = {
-            "name": f"Usuário Teste {random_id}",
-            "email": f"teste{random_id}@exemplo.com"
-        }
-        
-        with self.client.post("/v1/accounts",
-                            json=register_data,
-                            catch_response=True) as response:
-            if response.status_code == 200:
-                try:
-                    result = response.json()
-                    if result.get("data"):
-                        response.success()
-                    else:
-                        response.failure("Dados não encontrados na resposta")
-                except:
-                    response.failure("Resposta inválida")
-            elif response.status_code == 400:
-                response.success()  # Email já cadastrado é esperado
-            else:
-                response.failure(f"Status code: {response.status_code}")
+# Classe RegistrationUser desativada para evitar testes contra /v1/accounts
+# class RegistrationUser(HttpUser):
+#     wait_time = between(3, 6)
+#     host = "http://localhost:5010"
+#
+#     @task(1)
+#     def register_user(self):
+#         random_id = random.randint(10000, 99999)
+#         register_data = {
+#             "name": f"Usuário Teste {random_id}",
+#             "email": f"teste{random_id}@exemplo.com"
+#         }
+#
+#         with self.client.post("/v1/accounts",
+#                             json=register_data,
+#                             catch_response=True) as response:
+#             if response.status_code == 200:
+#                 try:
+#                     result = response.json()
+#                     if result.get("data"):
+#                         response.success()
+#                     else:
+#                         response.failure("Dados não encontrados na resposta")
+#                 except:
+#                     response.failure("Resposta inválida")
+#             elif response.status_code == 400:
+#                 response.success()  # Email já cadastrado é esperado
+#             else:
+#                 response.failure(f"Status code: {response.status_code}")
 
 
 class SequentialBlogUser(HttpUser):
@@ -208,11 +217,11 @@ class SequentialBlogUser(HttpUser):
 
         @task
         def step4_get_post_detail(self):
-            post_id = random.randint(1, 10)
+            post_id = 1
             self.client.get(f"/Post/v1/posts/{post_id}")
 
         @task
         def step5_get_posts_by_category(self):
-            categories = ["backend", "frontend", "mobile"]
+            categories = ["backend", "frontend"]
             category = random.choice(categories)
             self.client.get(f"/Post/v1/posts/category/{category}")

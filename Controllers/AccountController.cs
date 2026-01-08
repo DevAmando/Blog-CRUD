@@ -16,24 +16,29 @@ namespace Blog.Controllers
     public class AccountController : ControllerBase
     {
         private readonly TokenService _tokenService;
+        private readonly BlogDataContext _context;
 
-        public AccountController(TokenService tokenService)
+        public AccountController(TokenService tokenService, BlogDataContext context)
         {
             _tokenService = tokenService;
+            _context = context;
         }
 
         [HttpPost("accounts")]
 
-        public async Task<IActionResult> Post([FromBody] RegisterViewModel model, [FromServices] BlogDataContext context)
+        public async Task<IActionResult> Post([FromBody] RegisterViewModel model)
         {
             if (!ModelState.IsValid)
                 return BadRequest(new ResultViewModel<String>(ModelState.GetErrors()));
+
+            var baseSlug = model.Email.Replace("@", "-").Replace(".", "-");
+            var slug = await GenerateUniqueSlug(baseSlug);
 
             var user = new User
             {
                 Name = model.Name,
                 Email = model.Email,
-                Slug = model.Email.Replace("@", "-").Replace(".", "-"),
+                Slug = slug,
 
             };
 
@@ -42,8 +47,8 @@ namespace Blog.Controllers
 
             try
             {
-                await context.Users.AddAsync(user);
-                await context.SaveChangesAsync();
+                await _context.Users.AddAsync(user);
+                await _context.SaveChangesAsync();
 
                 return Ok(new ResultViewModel<dynamic>(new
                 {
@@ -64,14 +69,26 @@ namespace Blog.Controllers
 
         }
 
+        // Gera um slug único com base no slug sugerido verificando a existência no banco
+        private async Task<string> GenerateUniqueSlug(string baseSlug)
+        {
+            var slug = baseSlug;
+            var i = 1;
+            while (await _context.Users.AnyAsync(u => u.Slug == slug))
+            {
+                slug = $"{baseSlug}-{i++}";
+            }
+            return slug;
+        }
+
         [HttpPost("/accounts/login")]
-        public async Task<IActionResult> Login([FromBody] LoginViewModel model, [FromServices] BlogDataContext context)
+        public async Task<IActionResult> Login([FromBody] LoginViewModel model)
         {
 
             if (!ModelState.IsValid)
                 return BadRequest(new ResultViewModel<String>(ModelState.GetErrors()));
 
-            var user = await context.Users
+            var user = await _context.Users
                 .AsNoTracking()
                 .Include(x => x.Roles)
                 .FirstOrDefaultAsync(x => x.Email == model.Email);

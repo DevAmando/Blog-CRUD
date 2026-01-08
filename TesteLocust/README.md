@@ -15,7 +15,7 @@ Antes de executar os testes, certifique-se de que:
 
 1. A API está rodando (por padrão em `http://localhost:5000`)
 2. Se necessário, ajuste o `host` nas classes de usuário no `locustfile.py`
-3. Para testes com autenticação, configure um usuário válido em `AuthenticatedUser.login()`
+3. Para testes com autenticação, o `AuthenticatedUser` tenta autenticar automaticamente; se o login falhar ou não houver credenciais, ele tenta registrar um novo usuário via `/accounts` e faz login com a senha retornada.
 
 ## Executando os Testes
 
